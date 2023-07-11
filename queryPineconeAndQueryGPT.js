@@ -38,7 +38,7 @@ export const queryPineconeVectorStoreAndQueryLLM = async (
             question: question,
         });
 
-        console.log(`Answer: ${result.text}`);
+        return result.text;
     } else {
         console.log("Since there are no matches, GPT will not be queried.");
     }

@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@pinecone-database/pinecone": "^0.1.6",
+    "@slack/bolt": "^3.13.1",
     "dotenv": "^16.3.1",
     "langchain": "^0.0.104",
     "pdf-parse": "^1.1.1",

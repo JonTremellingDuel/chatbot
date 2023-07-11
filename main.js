@@ -6,9 +6,9 @@ import * as dotenv from "dotenv";
 import { createPineconeIndex } from "./createPineconeIndex.js";
 import { updatePinecone } from "./updatePinecone.js";
 import { queryPineconeVectorStoreAndQueryLLM } from "./queryPineconeAndQueryGPT.js";
-
 import * as readline from "readline";
 
+import Slack from "@slack/bolt";
 
 dotenv.config();
 
@@ -26,30 +26,46 @@ await client.init({
   environment: process.env.PINECONE_ENVIRONMENT,
 });
 
-(async () => {
-    await createPineconeIndex(client, indexName, vectorDimension);
+await createPineconeIndex(client, indexName, vectorDimension);
 
-    var rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
+var rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
-    var waitForUserInput = function() {
-        rl.question("Command: ", async function(command) {
-          if (command == "exit"){
-              rl.close();
-          } else {
-                if (command === "update") {
-                    await updatePinecone(client, indexName, docs);
-                    await waitForUserInput();
-                }
-                else {
-                    await queryPineconeVectorStoreAndQueryLLM(client, indexName, command);
-                    await waitForUserInput();
-                }
-          }
-        });
+const app = new Slack.App({
+    token: process.env.SLACK_BOT_TOKEN,
+    signingSecret: process.env.SLACK_SIGNING_SECRET,
+    socketMode: true,
+    appToken: process.env.APP_TOKEN,
+});
+
+app.message(async ({ message, say }) => {
+    try {
+        const command = message.text;
+
+        if (command === "update") {
+            say("Updating...")
+            await updatePinecone(client, indexName, docs);
+            say("Data store updated.")
+        }
+        else {
+            say("...")
+            const result = await queryPineconeVectorStoreAndQueryLLM(client, indexName, command);
+
+            if (! result) {
+                say("Sorry, I don't know the answer to that question")
+            }
+            else {
+                say(result);
+            }
+        }
+    } catch (error) {
+        console.error(error);
     }
+});
 
-    await waitForUserInput();
+(async () => {
+    await app.start(3000);
+    console.log('Bolt app started!!');
 })();
