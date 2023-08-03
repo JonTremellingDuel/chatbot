@@ -3,7 +3,6 @@ import { loadDocs, searchDocs } from "./store.js";
 import Slack from "@slack/bolt";
 
 dotenv.config();
-await loadDocs();
 
 const app = new Slack.App({
     token: process.env.SLACK_BOT_TOKEN,
