@@ -20,7 +20,7 @@ app.message(async ({ message, say }) => {
             await loadDocs();
             say("Data store updated.")
         }
-        else {
+        else if (command) {
             say("...")
             const result = await searchDocs(command);
 
