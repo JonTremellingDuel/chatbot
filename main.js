@@ -3,6 +3,7 @@ import { loadDocs, searchDocs } from "./store.js";
 import Slack from "@slack/bolt";
 
 dotenv.config();
+const DUEL_BOT_NAME = '<@U05FE5NFS4F>';
 
 const app = new Slack.App({
     token: process.env.SLACK_BOT_TOKEN,
@@ -11,28 +12,34 @@ const app = new Slack.App({
     appToken: process.env.APP_TOKEN,
 });
 
-app.message(async ({ message, say }) => {
-    try {
-        const command = message.text;
+const handleCommand = async (command, say) => {
+    if (command === "update") {
+        say("Updating...")
+        await loadDocs();
+        say("Data store updated.")
+    }
+    else if (command) {
+        say("...")
+        const result = await searchDocs(command);
 
-        if (command === "update") {
-            say("Updating...")
-            await loadDocs();
-            say("Data store updated.")
+        if (! result) {
+            say("Sorry, I don't know the answer to that question")
         }
-        else if (command) {
-            say("...")
-            const result = await searchDocs(command);
+        else {
+            say(result);
+        }
+    }
+}
 
-            if (! result) {
-                say("Sorry, I don't know the answer to that question")
-            }
-            else {
-                say(result);
-            }
+app.event('message', async ({ event, context, client, say }) => {
+    if (! event.hidden && (event.channel_type === 'im' || event.text.includes(DUEL_BOT_NAME))) {
+        const command = event.text.replace('<@U05FE5NFS4F> ', '');
+        try {
+          await handleCommand(command, say);
         }
-    } catch (error) {
-        console.error(error);
+        catch (error) {
+          console.error(error);
+        }
     }
 });
 

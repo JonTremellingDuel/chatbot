@@ -1,9 +1,0 @@
-### **Why Values?**
-
-Values are the ways of operating that we hold dear. The primary function of values is to aid each decision we make at Duel.
-
-Our values provide a framework in which all decisions at the company are made. From who to hire and how to operate as a team, to what features to build and how to deal with customers. Every Dueler makes countless decisions a day, the Duel Values framework will:
-
-- Make these decisions easier to make as you can check yourself against it
-- Ensure debate around decisions is minimised as the values should point us in what direction
-- This is *especially* important to allow us to scale the business, yet still retain our Duely-ness.
