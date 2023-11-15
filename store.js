@@ -7,7 +7,8 @@ import { OpenAI } from "langchain/llms/openai";
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 import { RedisVectorStore } from "langchain/vectorstores/redis";
 import { TextLoader } from "langchain/document_loaders/fs/text";
-import { createDocs, deleteDocs } from "./scrape.js";
+import * as fsExtra from "fs-extra";
+import axios from 'axios';
 
 const INDEX_NAME = "docs";
 
@@ -23,14 +24,18 @@ const client = createClient({
 await client.connect();
 
 const getDocuments = async () => {
-  await deleteDocs('./hubspot-documents');
-  await createDocs();
-  const loader = new DirectoryLoader("./hubspot-documents", {
+  try {
+    const response = await axios.get('http://localhost:3001/files-store');
+  } catch (error) {
+    console.error(error);
+  }
+  const loader = new DirectoryLoader("./files", {
     ".txt": (path) => new TextLoader(path),
     ".pdf": (path) => new PDFLoader(path),
+    ".md": (path) => new TextLoader(path),
   });
   const docs = await loader.load();
-  await deleteDocs('./hubspot-documents');
+  await deleteDocs('./files');
   return docs;
 }
 
@@ -52,29 +57,46 @@ const createVectorStore = async (docs) => {
   });
 }
 
+export const deleteDocs = async fileDir => {
+  fsExtra.emptyDirSync(fileDir);
+}
+
 export const loadDocs = async () => {
   const docs = await getDocuments();
-  redis = await createVectorStore(docs);
+  if (docs.length > 0) {
+    redis = await createVectorStore(docs);
+  }
+}
+
+export const dropDocs = async () => {
+  await redis.delete({
+    deleteAll: true,
+  });
 }
 
 export const searchDocs = async (question) => {
-  const relevantDocs = question && await redis.similaritySearch(question);
-  const mostRelevantDoc = relevantDocs?.[0];
+  try {
+    const relevantDocs = question && await redis.similaritySearch(question);
+    const mostRelevantDoc = relevantDocs?.[0];
 
-  if (! mostRelevantDoc) {
+    if (! mostRelevantDoc) {
+      return 'Sorry, we have no information around this topic.'
+    }
+
+    // Call the chain
+    const res = await chain.call({
+      input_documents: [mostRelevantDoc],
+      question,
+    });
+
+    const furtherReadingLink = `https://www.notion.so/${mostRelevantDoc.metadata.source.split("/").pop().split('.')[0].replaceAll(' ', '-')}`;
+
+    res.output_text = res.output_text.replace(/([.?!])\s*(?=[A-Z])/g, "$1|").split("|").filter(it => it.match(/\r|\n|\./)).join();
+    return res.output_text.concat(`\n\nFurther reading:\n${furtherReadingLink}`);
+  }
+  catch {
     return 'Sorry, we have no information around this topic.'
   }
-
-  // Call the chain
-  const res = await chain.call({
-    input_documents: [mostRelevantDoc],
-    question,
-  });
-
-  const furtherReadingLink = `https://info.duel.tech/help/${mostRelevantDoc.metadata.source.split("/").pop().split('.')[0]}`;
-
-  res.output_text = res.output_text.replace(/([.?!])\s*(?=[A-Z])/g, "$1|").split("|").filter(it => it.match(/\r|\n|\./)).join();
-  return res.output_text.concat(`\n\nFurther reading:\n${furtherReadingLink}`);
 }
 
 redis = await createVectorStore();
