@@ -6,19 +6,22 @@ function App() {
   const [file, setFile] = useState(null);
   const [fileContents, setFileContents] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
   const handleUpload = async () => {
+    setLoading(true);
     const formData = new FormData();
     formData.append('file', file);
 
     try {
       await axios.post('http://localhost:3001/upload', formData);
       alert('Files uploaded successfully');
-      fetchFileContents();
+      await fetchFileContents();
+      setLoading(false);
     } catch (error) {
       console.error(error);
       alert('Error uploading files');
@@ -64,9 +67,11 @@ function App() {
 
   const handleRemoveFile = async (fileName) => {
     try {
+      setLoading(true);
       await axios.delete(`http://localhost:3001/files/${fileName}`);
       alert(`File ${fileName} removed successfully`);
-      fetchFileContents();
+      await fetchFileContents();
+      setLoading(false);
     } catch (error) {
       console.error(error);
       alert('Error removing file');
@@ -75,9 +80,11 @@ function App() {
 
   const handleRemoveAll = async () => {
     try {
+      setLoading(true);
       await axios.delete('http://localhost:3001/files');
       alert('All files removed successfully');
-      fetchFileContents();
+      await fetchFileContents();
+      setLoading(false);
     } catch (error) {
       console.error(error);
       alert('Error removing all files');
@@ -92,7 +99,9 @@ function App() {
     <div>
       <h1>MERN Zip Upload</h1>
       <input type="file" onChange={handleFileChange} />
-      <button onClick={handleUpload}>Upload</button>
+      <button onClick={handleUpload} disabled={loading}>
+        {loading ? 'Uploading...' : 'Upload'}
+      </button>
 
       <h2>File Names</h2>
       <ul>
@@ -101,12 +110,12 @@ function App() {
             <span onClick={() => handleFileClick(file.filename)}>
               {file.filename}
             </span>{' '}
-            <button onClick={() => handleRemoveFile(file.filename)}>Remove</button>
+            <button onClick={() => handleRemoveFile(file.filename)} disabled={loading}>Remove</button>
           </li>
         ))}
       </ul>
 
-      <button onClick={handleRemoveAll}>Remove All</button>
+      <button onClick={handleRemoveAll} disabled={loading}>Remove All</button>
 
       {selectedFile && (
         <div>
